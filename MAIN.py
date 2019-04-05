@@ -15,9 +15,10 @@ class Item():
 
 
 class User():
-    def __init__(self,id):
+    def __init__(self,id,item_num):
         self.id = id
         self.items = []
+        self.item_num = item_num
 
     def setItems(self,item):
         self.items.append(item)
@@ -40,7 +41,7 @@ class Main():
 
         #获取items
         with open(ITEM_PATH,'r') as f:
-            line_no = 0
+            item_no = 0
             while True:
                 line = f.readline()
                 if not line:
@@ -55,9 +56,31 @@ class Main():
                 item = Item(id)
                 item.setAttr(attr1,attr2)
                 self.items.append(item)
-                self.item_dic[id] = line_no
-                line_no += 1
+                self.item_dic[id] = item_no
+                item_no += 1
 
+
+        with open(USER_PATH,'r') as f:
+            user_no = 0
+            while True:
+                line = f.readline()
+                user_no += 1
+                if not line or line == '\n':
+                    break
+                id,item_num = line.split('|')
+                item_num = int(item_num[:-1])
+                user = User(id,item_num)
+                for i in range(item_num):
+                    line = f.readline()
+                    item_id,score = line.split("  ")[:2]
+                    score = int(score)
+                    user.setItems([item_id,score])
+
+
+                self.user_dic[id] = item_num
+
+
+                self.users.append(user)
 
 
 
@@ -68,9 +91,9 @@ class Main():
 
     def mainMethod(self):
         self.getData()
-        for i in range(100):
-            print(self.item_dic[self.items[i].id])
-            print(self.items[i].id,self.items[i].attr1,self.items[i].attr2)
+        # for i in range(100):
+        #     print(self.item_dic[self.items[i].id])
+        #     print(self.items[i].id,self.items[i].attr1,self.items[i].attr2)
         # print(self.items)
 
 
