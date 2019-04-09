@@ -9,6 +9,8 @@ import pandas as pd
 
 ITEM_PATH = './data/itemAttribute.txt'
 USER_PATH = "./data/train.txt"
+TEST_PATH = "./data/test.txt"
+RESULT_PATH = "./result.txt"
 
 
 #Item数据类型
@@ -33,6 +35,8 @@ class User():
 
 
 
+
+
 class Main():
 
 
@@ -41,7 +45,10 @@ class Main():
         self.items = []
         #所有的User项
         self.users = []
+        #评分数据
         self.ratings = []
+        #测试数据集
+        self.test = []
         #Item id到self.items的映射
         self.item_dic = {}
         #user id到self.users的映射
@@ -79,7 +86,7 @@ class Main():
             user_no = 0
             while True:
                 line = f.readline()
-                user_no += 1
+
                 if not line or line == '\n':
                     break
                 id,item_num = line.split('|')
@@ -92,11 +99,32 @@ class Main():
                     user.setItems([item_id,score])
                     self.ratings.append([id,item_id,score / 20])
 
-                self.user_dic[id] = item_num
+                self.user_dic[id] = user_no
+                user_no += 1
 
 
                 self.users.append(user)
         self.user_num = len(self.users)
+
+
+        #获取测试数据
+        with open(TEST_PATH,'r') as f:
+            while True:
+                line = f.readline()
+                if not line or line == '\n':
+                    break
+
+                id,item_num = line.split('|')
+                item_num = int(item_num[:-1])
+                user = User(id)
+                for i in range(item_num):
+                    line = f.readline()
+                    item_id = line[:-1]
+                    user.setItems([item_id])
+                self.test.append(user)
+
+        self.test_num = len(self.test)
+
 
 
     def myCF(self):
@@ -113,15 +141,22 @@ class Main():
         self.data = Dataset.load_from_df(pd.DataFrame(self.ratings),self.reader)
         print(self.data)
         trainset, testset = train_test_split(self.data, test_size=.25)
-        model = SVD(n_factors=1000)
-        model.fit(trainset)
+        self.model = SVD(n_factors=2000)
+        self.model.fit(trainset)
         a_user = "0"
         a_product = "507696"
-        print(model.predict(a_user, a_product))
+        print(self.model.predict(a_user, a_product))
+
+
+    def predict(self):
+        for i in range(self.test_num):
+            for j in range(len(self.test[i].items)):
+                self.test[i].items[j].append(self.model.predict(self.test[i].items[j][0]))
 
     def mainMethod(self):
         self.getData()
         self.mySVD()
+        self.predict()
         # for i in range(100):
         #     print(self.item_dic[self.items[i].id])
         #     print(self.items[i].id,self.items[i].attr1,self.items[i].attr2)
