@@ -4,13 +4,15 @@ from surprise import SVD
 from surprise import Dataset, Reader
 from surprise.model_selection import cross_validate, train_test_split
 import pandas as pd
-
+from scipy import sparse
+from sklearn.neighbors import NearestNeighbors
 
 
 ITEM_PATH = './data/itemAttribute.txt'
 USER_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
 RESULT_PATH = "./result.txt"
+SVD_PARAMETER = 2000
 
 
 #Item数据类型
@@ -60,30 +62,31 @@ class Main():
 
 
         #获取items
-        with open(ITEM_PATH,'r') as f:
-            item_no = 0
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                id,attr1,attr2 = line.split('|')
-                attr2 = attr2[:-1]
-                if attr1 == 'None':
-                    attr1 = None
-
-                if attr2 == 'None':
-                    attr2 = None
-                item = Item(id)
-                item.setAttr(attr1,attr2)
-                self.items.append(item)
-                self.item_dic[id] = item_no
-                item_no += 1
-
-        self.item_num = len(self.items)
+        # with open(ITEM_PATH,'r') as f:
+        #     # item_no = 0
+        #     while True:
+        #         line = f.readline()
+        #         if not line:
+        #             break
+        #         id,attr1,attr2 = line.split('|')
+        #         attr2 = attr2[:-1]
+        #         if attr1 == 'None':
+        #             attr1 = None
+        #
+        #         if attr2 == 'None':
+        #             attr2 = None
+        #         item = Item(id)
+        #         item.setAttr(attr1,attr2)
+        #         self.items.append(item)
+        #         # self.item_dic[id] = item_no
+        #         # item_no += 1
+        #
+        # self.item_num = len(self.items)
 
         #获取users
         with open(USER_PATH,'r') as f:
             user_no = 0
+            item_no = 0
             while True:
                 line = f.readline()
 
@@ -98,13 +101,24 @@ class Main():
                     score = int(score)
                     user.setItems([item_id,score])
                     self.ratings.append([id,item_id,score / 20])
-
+                    if item_id not in self.item_dic:
+                        self.item_dic[item_id] = item_no
+                        item_no += 1
+                        self.items.append(Item(item_id))
                 self.user_dic[id] = user_no
                 user_no += 1
 
-
+                # print(id)
                 self.users.append(user)
         self.user_num = len(self.users)
+        self.item_num = len(self.items)
+        self.rating_matrix = sparse.dok_matrix((self.user_num, self.item_num))
+        # print(self.item_dic['507696'])
+        for i in range(self.user_num):
+            for j in range(self.users[i].item_num):
+                self.rating_matrix[self.user_dic[self.users[i].id],self.item_dic[self.users[i].items[j][0]]] = self.users[i].items[j][1]
+
+
 
 
         #获取测试数据
@@ -116,7 +130,7 @@ class Main():
 
                 id,item_num = line.split('|')
                 item_num = int(item_num[:-1])
-                user = User(id)
+                user = User(id,item_num)
                 for i in range(item_num):
                     line = f.readline()
                     item_id = line[:-1]
@@ -124,7 +138,8 @@ class Main():
                 self.test.append(user)
 
         self.test_num = len(self.test)
-
+        # for i in self.test:
+        #     print(i.id,i.items)
 
 
     def myCF(self):
@@ -140,8 +155,8 @@ class Main():
         self.reader = Reader(rating_scale = (1,5))
         self.data = Dataset.load_from_df(pd.DataFrame(self.ratings),self.reader)
         print(self.data)
-        trainset, testset = train_test_split(self.data, test_size=.25)
-        self.model = SVD(n_factors=2000)
+        trainset, testset = train_test_split(self.data, test_size=.15)
+        self.model = SVD(n_factors=SVD_PARAMETER)
         self.model.fit(trainset)
         a_user = "0"
         a_product = "507696"
@@ -149,14 +164,21 @@ class Main():
 
 
     def predict(self):
-        for i in range(self.test_num):
-            for j in range(len(self.test[i].items)):
-                self.test[i].items[j].append(self.model.predict(self.test[i].items[j][0]))
+        with open(RESULT_PATH,'w') as f:
+            for i in range(self.test_num):
+                f.write(self.test[i].id)
+                f.write('\n')
+                for j in range(len(self.test[i].items)):
+                    self.test[i].items[j].append(self.model.predict(self.test[i].id,self.test[i].items[j][0])[3] * 20)
+                    f.write(self.test[i].items[j][0])
+                    f.write(':')
+                    f.write(str(self.test[i].items[j][1]))
+                    f.write('\n')
 
     def mainMethod(self):
         self.getData()
-        self.mySVD()
-        self.predict()
+        # self.mySVD()
+        # self.predict()
         # for i in range(100):
         #     print(self.item_dic[self.items[i].id])
         #     print(self.items[i].id,self.items[i].attr1,self.items[i].attr2)
