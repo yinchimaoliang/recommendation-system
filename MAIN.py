@@ -9,7 +9,7 @@ from sklearn.neighbors import NearestNeighbors
 
 
 ITEM_PATH = './data/itemAttribute.txt'
-USER_PATH = "./data/train.txt"
+USER_PATH = "./data/temp.txt"
 TEST_PATH = "./data/test.txt"
 RESULT_PATH = "./result.txt"
 SVD_PARAMETER = 2000
@@ -99,6 +99,8 @@ class Main():
                     line = f.readline()
                     item_id,score = line.split("  ")[:2]
                     score = int(score)
+                    if score == 0:
+                        score = 1
                     user.setItems([item_id,score])
                     self.ratings.append([id,item_id,score / 20])
                     if item_id not in self.item_dic:
@@ -163,6 +165,54 @@ class Main():
         print(self.model.predict(a_user, a_product))
 
 
+
+    def myPearson(self,n1,n2):
+        sum_xy = 0
+        sum_x = 0
+        sum_y = 0
+        sum_x2 = 0
+        sum_y2 = 0
+        n = 0
+        items_1 = np.array(self.users[n2].items)
+        items_2 = np.array(self.users[n2].items)
+        for key in items_1:
+            if key[0] in items_2[:,0]:
+                n += 1
+                x = self.users[n1].items[key][1]
+                y = self.users[n2].items[key][1]
+                sum_xy += x * y
+                sum_x += x
+                sum_y += y
+                sum_x2 += pow(x, 2)
+                sum_y2 += pow(y, 2)
+        if n == 0:
+            return 0
+
+            # 皮尔逊相关系数计算公式
+        denominator = sqrt(sum_x2 - pow(sum_x, 2) / n) * sqrt(sum_y2 - pow(sum_y, 2) / n)
+        if denominator == 0:
+            return 0
+        else:
+            return (sum_xy - (sum_x * sum_y) / n) / denominator
+
+
+    def computeUserSim(self,user_id):
+        n1 = self.user_dic[user_id]
+        dists = []
+        for n2 in range(self.user_num):
+            if n2 != n1:
+                dist = self.myPearson(n1,n2)
+                dists.append(dist)
+
+        dists.sort()
+        print(len(dists),self.user_num)
+        return dists
+
+
+
+
+
+
     def predict(self):
         with open(RESULT_PATH,'w') as f:
             for i in range(self.test_num):
@@ -177,6 +227,7 @@ class Main():
 
     def mainMethod(self):
         self.getData()
+        self.computeUserSim('0')
         # self.mySVD()
         # self.predict()
         # for i in range(100):
