@@ -5,6 +5,7 @@ from surprise import Dataset, Reader
 from surprise.model_selection import cross_validate, train_test_split
 import pandas as pd
 from scipy import sparse
+from math import sqrt
 from sklearn.neighbors import NearestNeighbors
 
 
@@ -178,8 +179,8 @@ class Main():
         for key in items_1:
             if key[0] in items_2[:,0]:
                 n += 1
-                x = self.users[n1].items[key][1]
-                y = self.users[n2].items[key][1]
+                x = self.rating_matrix[n1,self.item_dic[key[0]]]
+                y = self.rating_matrix[n2,self.item_dic[key[0]]]
                 sum_xy += x * y
                 sum_x += x
                 sum_y += y
@@ -205,13 +206,17 @@ class Main():
                 dists.append(dist)
 
         dists.sort()
-        print(len(dists),self.user_num)
+        print(dists)
         return dists
 
 
 
 
+    def myCosSim(self,n1,n2):
+        vec1 = [0 for i in range(self.item_num)]
+        vec2 = [0 for i in range(self.item_num)]
 
+        
 
     def predict(self):
         with open(RESULT_PATH,'w') as f:
