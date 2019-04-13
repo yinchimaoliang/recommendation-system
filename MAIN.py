@@ -11,7 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 
 ITEM_PATH = './data/itemAttribute.txt'
 USER_PATH = "./data/temp.txt"
-TEST_PATH = "./data/test.txt"
+TEST_PATH = "./data/test_temp.txt"
 RESULT_PATH = "./result.txt"
 SVD_PARAMETER = 2000
 
@@ -253,22 +253,35 @@ class Main():
         sim = 0.5 + 0.5 * cos
         return sim
 
-    def predict(self):
-        with open(RESULT_PATH,'w') as f:
-            for i in range(self.test_num):
-                f.write(self.test[i].id)
-                f.write('\n')
-                for j in range(len(self.test[i].items)):
-                    self.test[i].items[j].append(self.model.predict(self.test[i].id,self.test[i].items[j][0])[3] * 20)
-                    f.write(self.test[i].items[j][0])
-                    f.write(':')
-                    f.write(str(self.test[i].items[j][1]))
+    def predict(self,type):
+        if type == 'SVD':
+            with open(RESULT_PATH,'w') as f:
+                for i in range(self.test_num):
+                    f.write(self.test[i].id)
                     f.write('\n')
+                    for j in range(len(self.test[i].items)):
+                        self.test[i].items[j].append(self.model.predict(self.test[i].id,self.test[i].items[j][0])[3] * 20)
+                        f.write(self.test[i].items[j][0])
+                        f.write(':')
+                        f.write(str(self.test[i].items[j][1]))
+                        f.write('\n')
+        if type == 'user':
+            with open(RESULT_PATH,'w') as f:
+                for i in range(self.test_num):
+                    f.write(self.test[i].id)
+                    f.write('\n')
+                    for j in range(len(self.test[i].items)):
+                        self.test[i].items[j].append(self.myCF(self.test[i].id,self.test[i].items[j][0],type = 'user'))
+                        f.write(self.test[i].items[j][0])
+                        f.write(':')
+                        f.write(str(self.test[i].items[j][1]))
+                        f.write('\n')
 
     def mainMethod(self):
         self.getData()
+        self.predict('user')
         # print(self.user_dic)
-        print(self.myCF('0','180171','user'))
+        # print(self.myCF('0','180171','user'))
         # print(self.computeUserSim('0','user'))
         # print(self.rating_aves[0])
         # self.computeUserSim('0')
