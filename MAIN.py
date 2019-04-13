@@ -36,8 +36,9 @@ class User():
     def setItems(self,item):
         self.items.append(item)
 
-
-
+    def getAverage(self):
+        t = np.array(self.items,dtype = 'uint')
+        return np.mean(t[:,1])
 
 
 class Main():
@@ -52,6 +53,8 @@ class Main():
         self.ratings = []
         #测试数据集
         self.test = []
+        #用户平均评分
+        self.rating_aves = []
         #Item id到self.items的映射
         self.item_dic = {}
         #user id到self.users的映射
@@ -121,7 +124,8 @@ class Main():
             for j in range(self.users[i].item_num):
                 self.rating_matrix[self.user_dic[self.users[i].id],self.item_dic[self.users[i].items[j][0]]] = self.users[i].items[j][1]
 
-
+        for i in range(self.user_num):
+            self.rating_aves.append(self.users[i].getAverage())
 
 
         #获取测试数据
@@ -145,14 +149,26 @@ class Main():
         #     print(i.id,i.items)
 
 
-    def myCF(self):
-        self.train_data_matrix = np.zeros([self.user_num,self.item_num])
-        for i in range(self.user_num):
-            for j in range(len(self.users[i].items)):
-                col = self.item_dic[self.users[i].items[j][0]]
-                self.train_data_matrix[i][col] = self.users[i].items[j][1]
+    def myCF(self,user_id,item_id,type):
+        user_no = self.user_dic[user_id]
+        item_no = self.item_dic[item_id]
+        pre = []
+        if type == 'user':
+            user_sims = self.computeUserSim(user_id,type)
 
-        print(self.train_data_matrix.size)
+            molecule_sum = 0
+            denominator_sum = 0
+            for j in range(self.user_num):
+                if self.rating_matrix[j,item_no] == 0:
+                    continue
+                molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
+                denominator_sum += user_sims[j]
+            return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
+
+        return pre
+
+
+
 
     def mySVD(self):
         self.reader = Reader(rating_scale = (1,5))
@@ -197,17 +213,27 @@ class Main():
             return (sum_xy - (sum_x * sum_y) / n) / denominator
 
 
-    def computeUserSim(self,user_id):
-        n1 = self.user_dic[user_id]
-        dists = []
-        for n2 in range(self.user_num):
-            if n2 != n1:
-                dist = self.myPearson(n1,n2)
-                dists.append(dist)
+    def computeUserSim(self,id,type):
+        # n1 = self.user_dic[user_id]
+        # dists = []
+        # for n2 in range(self.user_num):
+        #     if n2 != n1:
+        #         dist = self.myPearson(n1,n2)
+        #         dists.append(dist)
+        #
+        # dists.sort()
+        # print(dists)
+        # return dists
 
-        dists.sort()
-        print(dists)
-        return dists
+
+        if type == 'user':
+            user_sims = []
+            user_no = self.user_dic[id]
+            for i in range(self.user_num):
+                sim = self.myCosSim(user_no,i)
+                user_sims.append(sim)
+
+            return user_sims
 
 
 
@@ -215,8 +241,17 @@ class Main():
     def myCosSim(self,n1,n2):
         vec1 = [0 for i in range(self.item_num)]
         vec2 = [0 for i in range(self.item_num)]
-
-        
+        for i in range(self.users[n1].item_num):
+            vec1[self.item_dic[self.users[n1].items[i][0]]] = self.users[n1].items[i][1]
+        for i in range(self.users[n2].item_num):
+            vec2[self.item_dic[self.users[n2].items[i][0]]] = self.users[n2].items[i][1]
+        vector_a = np.mat(vec1)
+        vector_b = np.mat(vec2)
+        num = float(vector_a * vector_b.T)
+        denom = np.linalg.norm(vector_a) * np.linalg.norm(vector_b)
+        cos = num / denom
+        sim = 0.5 + 0.5 * cos
+        return sim
 
     def predict(self):
         with open(RESULT_PATH,'w') as f:
@@ -232,7 +267,11 @@ class Main():
 
     def mainMethod(self):
         self.getData()
-        self.computeUserSim('0')
+        # print(self.user_dic)
+        print(self.myCF('0','180171','user'))
+        # print(self.computeUserSim('0','user'))
+        # print(self.rating_aves[0])
+        # self.computeUserSim('0')
         # self.mySVD()
         # self.predict()
         # for i in range(100):
