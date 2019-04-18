@@ -6,8 +6,8 @@ import time
 ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
-RESULT_PATH = "./a.txt"
-START = 0
+RESULT_PATH = "./CF_USER_result.txt"
+START = 206
 END = 300
 SVD_PARAMETER = 2000
 
@@ -151,14 +151,11 @@ class Main():
         print('start computeSim')
         start = time.time()
         set = [self.item_dic[self.users[user_no].items[i][0]] for i in range(self.users[user_no].item_num)]
-        mat_1 = self.rating_matrix[user_no, set]
-        mat_2 = self.rating_matrix[:, set]
-        mat_result = mat_1.dot(mat_2.T)
-        # print(mat_result)
+        mat = self.rating_matrix[user_no, set]
         # print(set)
         for j in range(self.user_num):
             # print(sum(self.rating_matrix[user_no,set] * self.rating_matrix[j,set]))
-            num = mat_result[0,j]
+            num = mat.dot(self.rating_matrix[j,set].T)[0,0]
             denom = self.rating_aves[user_no] * self.users[user_no].item_num * self.rating_aves[j] * self.users[j].item_num
             cos = num / denom
             sim = 0.5 + 0.5 * cos

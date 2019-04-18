@@ -1,4 +1,8 @@
 import numpy as np
+from surprise import SVD
+from surprise import Dataset, Reader
+from surprise.model_selection import cross_validate, train_test_split
+import pandas as pd
 from scipy import sparse
 import time
 
@@ -6,10 +10,8 @@ import time
 ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
-RESULT_PATH = "./a.txt"
-START = 0
-END = 300
-SVD_PARAMETER = 2000
+RESULT_PATH = "./result/SVD.txt"
+SVD_PARAMETER = 10
 
 
 #Item数据类型
@@ -60,6 +62,7 @@ class Main():
 
     def getData(self):
 
+
         #获取users
         with open(TRAIN_PATH,'r') as f:
             user_no = 0
@@ -86,19 +89,17 @@ class Main():
                         self.items.append(Item(item_id))
                 self.user_dic[id] = user_no
                 user_no += 1
+
+                # print(id)
                 self.users.append(user)
-
-        #user数量
         self.user_num = len(self.users)
-        #item数量
         self.item_num = len(self.items)
-
-        #打分矩阵
         self.rating_matrix = sparse.dok_matrix((self.user_num, self.item_num))
+        # print(self.item_dic['507696'])
         for i in range(self.user_num):
             for j in range(self.users[i].item_num):
                 self.rating_matrix[self.user_dic[self.users[i].id],self.item_dic[self.users[i].items[j][0]]] = self.users[i].items[j][1]
-        #计算每个用户的平均打分
+
         for i in range(self.user_num):
             self.rating_aves.append(self.users[i].getAverage())
 
@@ -120,92 +121,46 @@ class Main():
                 self.test.append(user)
 
         self.test_num = len(self.test)
+        # for i in self.test:
+        #     print(i.id,i.items)
         print('finish getData')
 
 
-    #协同过滤算法
-    def myCF(self,user_id,item_id,user_sims):
-        #转换为列表号
-        user_no = self.user_dic[user_id]
-        if item_id not in self.item_dic:
-            return -1
-        item_no = self.item_dic[item_id]
-        #分子
-        molecule_sum = 0
-        #分母
-        denominator_sum = 0
-        for j in range(self.user_num):
-            if self.rating_matrix[j,item_no] == 0:
-                continue
-            molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
-            denominator_sum += user_sims[j]
-        return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
 
-
-    #计算某用户对所有用户的相似度
-    def computeUserSim(self,id):
-        #存放用户相似度
-        user_sims = []
-        user_no = self.user_dic[id]
-
-        print('start computeSim')
-        start = time.time()
-        set = [self.item_dic[self.users[user_no].items[i][0]] for i in range(self.users[user_no].item_num)]
-        mat_1 = self.rating_matrix[user_no, set]
-        mat_2 = self.rating_matrix[:, set]
-        mat_result = mat_1.dot(mat_2.T)
-        # print(mat_result)
-        # print(set)
-        for j in range(self.user_num):
-            # print(sum(self.rating_matrix[user_no,set] * self.rating_matrix[j,set]))
-            num = mat_result[0,j]
-            denom = self.rating_aves[user_no] * self.users[user_no].item_num * self.rating_aves[j] * self.users[j].item_num
-            cos = num / denom
-            sim = 0.5 + 0.5 * cos
-            user_sims.append(sim)
-        # user_sims = matrix_1 * matrix_2
-        # print('start computeSim')
-        # for i in range(self.user_num):
-        #     sim = self.myCosSim(user_no,i)
-        #     user_sims.append(sim)
-        end = time.time()
-        print('finish computeSim,using %d seconds' %(end - start))
-        return user_sims
+    def mySVD(self):
+        self.reader = Reader(rating_scale = (1,5))
+        self.data = Dataset.load_from_df(pd.DataFrame(self.ratings),self.reader)
+        print(self.data)
+        trainset, testset = train_test_split(self.data, test_size=.15)
+        self.model = SVD(n_factors=SVD_PARAMETER)
+        self.model.fit(trainset)
+        a_user = "0"
+        a_product = "507696"
+        print(self.model.predict(a_user, a_product))
 
 
 
-    #计算两用户余弦相似度
-    def myCosSim(self,n1,n2):
-        num = 0
-        for i in range(self.users[n1].item_num):
-            num += self.users[n1].items[i][1] * self.rating_matrix[n2,self.item_dic[self.users[n1].items[i][0]]]
-
-        denom = self.rating_aves[n1] * self.users[n1].item_num * self.rating_aves[n2] * self.users[n2].item_num
-        cos = num / denom
-        sim = 0.5 + 0.5 * cos
-        return sim
 
     def predict(self):
-        for i in range(START,END):
-            user_sims = self.computeUserSim(self.test[i].id)
+        for i in range(self.test_num):
             with open(RESULT_PATH,'a') as f:
-
                 f.write(self.test[i].id)
                 f.write('\n')
                 for j in range(len(self.test[i].items)):
-                    self.test[i].items[j].append(self.myCF(self.test[i].id,self.test[i].items[j][0],user_sims = user_sims))
+                    self.test[i].items[j].append(self.model.predict(self.test[i].id,self.test[i].items[j][0])[3] * 20)
                     f.write(self.test[i].items[j][0])
                     f.write(':')
                     f.write(str(self.test[i].items[j][1]))
                     f.write('\n')
 
     def mainMethod(self):
-        #将数据放在内存中
         self.getData()
         start = time.clock()
+        self.mySVD()
         self.predict()
         elapsed = (time.clock() - start)
         print(elapsed)
+
 
 if __name__ == '__main__':
     t = Main()

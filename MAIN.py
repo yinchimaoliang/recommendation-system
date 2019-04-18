@@ -6,12 +6,13 @@ from surprise.model_selection import cross_validate, train_test_split
 import pandas as pd
 from scipy import sparse
 from math import sqrt
+import time
 from sklearn.neighbors import NearestNeighbors
 
 
 ITEM_PATH = './data/itemAttribute.txt'
-USER_PATH = "./data/temp.txt"
-TEST_PATH = "./data/test_temp.txt"
+USER_PATH = "./data/train.txt"
+TEST_PATH = "./data/test.txt"
 RESULT_PATH = "./result.txt"
 SVD_PARAMETER = 2000
 
@@ -147,14 +148,14 @@ class Main():
         self.test_num = len(self.test)
         # for i in self.test:
         #     print(i.id,i.items)
+        print('finish getData')
 
-
-    def myCF(self,user_id,item_id,type):
+    def myCF(self,user_id,item_id,type,user_sims):
         user_no = self.user_dic[user_id]
         item_no = self.item_dic[item_id]
         pre = []
         if type == 'user':
-            user_sims = self.computeUserSim(user_id,type)
+             # = self.computeUserSim(user_id,type)
 
             molecule_sum = 0
             denominator_sum = 0
@@ -164,7 +165,7 @@ class Main():
                 molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
                 denominator_sum += user_sims[j]
             return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
-
+            print('finish myCF')
         return pre
 
 
@@ -230,25 +231,30 @@ class Main():
             user_sims = []
             user_no = self.user_dic[id]
             for i in range(self.user_num):
+                # if i % 1000 == 0:
+                #     print("finish %d myCosSim" % i)
                 sim = self.myCosSim(user_no,i)
                 user_sims.append(sim)
-
+            print('finish computeSim')
             return user_sims
 
 
 
 
     def myCosSim(self,n1,n2):
-        vec1 = [0 for i in range(self.item_num)]
-        vec2 = [0 for i in range(self.item_num)]
+        # vec1 = [0 for i in range(self.item_num)]
+        # vec2 = [0 for i in range(self.item_num)]
+        num = 0
         for i in range(self.users[n1].item_num):
-            vec1[self.item_dic[self.users[n1].items[i][0]]] = self.users[n1].items[i][1]
-        for i in range(self.users[n2].item_num):
-            vec2[self.item_dic[self.users[n2].items[i][0]]] = self.users[n2].items[i][1]
-        vector_a = np.mat(vec1)
-        vector_b = np.mat(vec2)
-        num = float(vector_a * vector_b.T)
-        denom = np.linalg.norm(vector_a) * np.linalg.norm(vector_b)
+            # vec1[self.item_dic[self.users[n1].items[i][0]]] = self.users[n1].items[i][1]
+            num += self.users[n1].items[i][1] * self.rating_matrix[n2,self.item_dic[self.users[n1].items[i][0]]]
+
+        # for i in range(self.users[n2].item_num):
+        #     vec2[self.item_dic[self.users[n2].items[i][0]]] = self.users[n2].items[i][1]
+        # vector_a = np.mat(vec1)
+        # vector_b = np.mat(vec2)
+        # num = float(vector_a * vector_b.T)
+        denom = self.rating_aves[n1] * self.users[n1].item_num * self.rating_aves[n2] * self.users[n2].item_num
         cos = num / denom
         sim = 0.5 + 0.5 * cos
         return sim
@@ -266,12 +272,14 @@ class Main():
                         f.write(str(self.test[i].items[j][1]))
                         f.write('\n')
         if type == 'user':
-            with open(RESULT_PATH,'w') as f:
-                for i in range(self.test_num):
+            for i in range(1):
+                user_sims = self.computeUserSim(self.test[i].id, type)
+                with open(RESULT_PATH,'a') as f:
+
                     f.write(self.test[i].id)
                     f.write('\n')
                     for j in range(len(self.test[i].items)):
-                        self.test[i].items[j].append(self.myCF(self.test[i].id,self.test[i].items[j][0],type = 'user'))
+                        self.test[i].items[j].append(self.myCF(self.test[i].id,self.test[i].items[j][0],type = 'user',user_sims = user_sims))
                         f.write(self.test[i].items[j][0])
                         f.write(':')
                         f.write(str(self.test[i].items[j][1]))
@@ -279,7 +287,10 @@ class Main():
 
     def mainMethod(self):
         self.getData()
+        start = time.clock()
         self.predict('user')
+        elapsed = (time.clock() - start)
+        print(elapsed)
         # print(self.user_dic)
         # print(self.myCF('0','180171','user'))
         # print(self.computeUserSim('0','user'))
