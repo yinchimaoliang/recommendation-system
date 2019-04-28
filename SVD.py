@@ -10,7 +10,7 @@ import time
 ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
-RESULT_PATH = "./result/SVD.txt"
+RESULT_PATH = "./result/SVD_result.txt"
 SVD_PARAMETER = 10
 
 

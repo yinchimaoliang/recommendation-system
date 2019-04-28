@@ -7,6 +7,7 @@ a[:,[1,2,3,4,5,6]] = 1
 b[:,1] = 1
 # print(a[:,1])
 x = a[1,:]
+print(x.toarray())
 y = b[1,[2,3,4]]
 z = [a[0,:] for i in range(10)]
 mat_a = x

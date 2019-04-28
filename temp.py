@@ -7,8 +7,8 @@ ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
 RESULT_PATH = "./a.txt"
-START = 0
-END = 300
+START = 300
+END = 1000
 SVD_PARAMETER = 2000
 
 
@@ -130,16 +130,25 @@ class Main():
         if item_id not in self.item_dic:
             return -1
         item_no = self.item_dic[item_id]
-        #分子
-        molecule_sum = 0
-        #分母
-        denominator_sum = 0
-        for j in range(self.user_num):
-            if self.rating_matrix[j,item_no] == 0:
-                continue
-            molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
-            denominator_sum += user_sims[j]
-        return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
+        mat_1 = np.array(user_sims)
+        mat_2 = np.array(self.rating_matrix[:,item_no].toarray()).flatten()
+        set = mat_2.nonzero()[0]
+        mat_3 = np.array(self.rating_aves)
+        # print(self.rating_matrix[:,item_no].toarray().shape)
+        # print(mat_2.shape)
+        mat_result = np.dot(mat_1[set],(mat_2[set] - mat_3[set]))
+        # print(mat_result)
+        return mat_result / np.sum(mat_1[set]) + self.rating_aves[user_no]
+        # #分子
+        # molecule_sum = 0
+        # #分母
+        # denominator_sum = 0
+        # for j in range(self.user_num):
+        #     if self.rating_matrix[j,item_no] == 0:
+        #         continue
+        #     molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
+        #     denominator_sum += user_sims[j]
+        # return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
 
 
     #计算某用户对所有用户的相似度
@@ -173,17 +182,6 @@ class Main():
         return user_sims
 
 
-
-    #计算两用户余弦相似度
-    def myCosSim(self,n1,n2):
-        num = 0
-        for i in range(self.users[n1].item_num):
-            num += self.users[n1].items[i][1] * self.rating_matrix[n2,self.item_dic[self.users[n1].items[i][0]]]
-
-        denom = self.rating_aves[n1] * self.users[n1].item_num * self.rating_aves[n2] * self.users[n2].item_num
-        cos = num / denom
-        sim = 0.5 + 0.5 * cos
-        return sim
 
     def predict(self):
         for i in range(START,END):
