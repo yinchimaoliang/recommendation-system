@@ -7,9 +7,8 @@ ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
 RESULT_PATH = "./result/CF_USER_result.txt"
-START = 18000
+START = 0
 END = 20000
-SVD_PARAMETER = 2000
 
 
 #Item数据类型

@@ -10,8 +10,8 @@ import time
 ITEM_PATH = './data/itemAttribute.txt'
 TRAIN_PATH = "./data/train.txt"
 TEST_PATH = "./data/test.txt"
-RESULT_PATH = "./result/SVD_result.txt"
-SVD_PARAMETER = 10
+RESULT_PATH = "./SVD_result.txt"
+SVD_PARAMETER = 2000
 
 
 #Item数据类型
@@ -134,6 +134,7 @@ class Main():
         trainset, testset = train_test_split(self.data, test_size=.15)
         self.model = SVD(n_factors=SVD_PARAMETER)
         self.model.fit(trainset)
+        self.model
         a_user = "0"
         a_product = "507696"
         print(self.model.predict(a_user, a_product))

@@ -4,12 +4,11 @@ import time
 
 
 ITEM_PATH = './data/itemAttribute.txt'
-TRAIN_PATH = "./data/train.txt"
-TEST_PATH = "./data/test.txt"
-RESULT_PATH = "./a.txt"
-START = 300
-END = 1000
-SVD_PARAMETER = 2000
+TRAIN_PATH = "./data/test_train.txt"
+TEST_PATH = "./data/test_test.txt"
+RESULT_PATH = "./test_CF_USER_result.txt"
+START = 0
+END = 100
 
 
 #Item数据类型
@@ -21,6 +20,7 @@ class Item():
     def setAttr(self,attr1,attr2):
         self.attr1 = attr1
         self.attr2 = attr2
+
 
 #User数据类型
 class User():
@@ -134,21 +134,8 @@ class Main():
         mat_2 = np.array(self.rating_matrix[:,item_no].toarray()).flatten()
         set = mat_2.nonzero()[0]
         mat_3 = np.array(self.rating_aves)
-        # print(self.rating_matrix[:,item_no].toarray().shape)
-        # print(mat_2.shape)
         mat_result = np.dot(mat_1[set],(mat_2[set] - mat_3[set]))
-        # print(mat_result)
         return mat_result / np.sum(mat_1[set]) + self.rating_aves[user_no]
-        # #分子
-        # molecule_sum = 0
-        # #分母
-        # denominator_sum = 0
-        # for j in range(self.user_num):
-        #     if self.rating_matrix[j,item_no] == 0:
-        #         continue
-        #     molecule_sum += user_sims[j] * (self.rating_matrix[j,item_no] / 20 - self.rating_aves[j] / 20)
-        #     denominator_sum += user_sims[j]
-        # return self.rating_aves[user_no] + molecule_sum / denominator_sum * 20
 
 
     #计算某用户对所有用户的相似度
@@ -157,8 +144,8 @@ class Main():
         user_sims = []
         user_no = self.user_dic[id]
 
-        print('start computeSim')
-        start = time.time()
+
+
         set = [self.item_dic[self.users[user_no].items[i][0]] for i in range(self.users[user_no].item_num)]
         mat_1 = self.rating_matrix[user_no, set]
         mat_2 = self.rating_matrix[:, set]
@@ -172,19 +159,15 @@ class Main():
             cos = num / denom
             sim = 0.5 + 0.5 * cos
             user_sims.append(sim)
-        # user_sims = matrix_1 * matrix_2
-        # print('start computeSim')
-        # for i in range(self.user_num):
-        #     sim = self.myCosSim(user_no,i)
-        #     user_sims.append(sim)
-        end = time.time()
-        print('finish computeSim,using %d seconds' %(end - start))
+
         return user_sims
 
 
 
     def predict(self):
         for i in range(START,END):
+            start = time.time()
+            print('start predict' + str(i))
             user_sims = self.computeUserSim(self.test[i].id)
             with open(RESULT_PATH,'a') as f:
 
@@ -196,14 +179,12 @@ class Main():
                     f.write(':')
                     f.write(str(self.test[i].items[j][1]))
                     f.write('\n')
-
+            end = time.time()
+            print('finish predict %d,using %f seconds' % (i,end - start))
     def mainMethod(self):
         #将数据放在内存中
         self.getData()
-        start = time.clock()
-        self.predict()
-        elapsed = (time.clock() - start)
-        print(elapsed)
+        print(self.rating_aves)
 
 if __name__ == '__main__':
     t = Main()
